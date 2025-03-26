@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import unicodedata
 import gspread
+import json
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
@@ -17,7 +18,8 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1B1gSYnyx1VVNEuhI1iwwX_xZ9sF
 
 def conectar_a_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("credenciales.json", scope)
+    info = st.secrets["google_sheets"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(str(info)), scope)
     cliente = gspread.authorize(creds)
     return cliente
 
