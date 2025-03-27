@@ -17,7 +17,7 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1B1gSYnyx1VVNEuhI1iwwX_xZ9sF
 
 def conectar_a_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    info = dict(st.secrets["google_sheets"])
+    info = st.secrets["google_sheets"]  # ya es un diccionario
     creds = ServiceAccountCredentials.from_json_keyfile_dict(info, scope)
     cliente = gspread.authorize(creds)
     return cliente
@@ -52,6 +52,8 @@ def mostrar_estrellas(promedio):
     media = promedio - llenas >= 0.5
     vacias = 5 - llenas - int(media)
     return "⭐" * llenas + ("✴️" if media else "") + "☆" * vacias
+
+# [... resto del código igual ...]
 
 def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
     df = df.copy()
