@@ -98,3 +98,76 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                 fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
                 hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
                 st.success("¡Gracias por tu valoración!")
+
+# --------------------------
+# INTERFAZ INICIAL
+# --------------------------
+
+st.markdown("""
+<h1 style='text-align: center;'>Buscador de servicios, actividades y productos</h1>
+<p style='text-align: center;'>Seleccioná una categoría para explorar los datos disponibles de proveedores de servicios para Comarca del Sol y zonas aledañas. Podés buscar palabras como estas:</p>
+<p style='text-align: center;'>
+Prov. de Servicios (<i>Herrería, Carpintería, Fletes</i>)<br>
+Actividades (<i>Yoga, Niños, Vitrofusión</i>)<br>
+Comestibles (<i>Cerveza, Dulces, Carnes</i>)
+</p>
+""", unsafe_allow_html=True)
+
+st.divider()
+
+col1, col2, col3 = st.columns([1,1,1])
+categoria = st.session_state.get("categoria", None)
+
+with col1:
+    if st.button("Prov. de Servicios", use_container_width=True):
+        categoria = "Prov. de Servicios"
+with col2:
+    if st.button("Actividades", use_container_width=True):
+        categoria = "Actividades"
+with col3:
+    if st.button("Comestibles", use_container_width=True):
+        categoria = "Comestibles"
+
+if categoria:
+    st.session_state["categoria"] = categoria
+    st.markdown(f"<h2 style='text-align: center;'>Búsqueda en: {categoria}</h2>", unsafe_allow_html=True)
+    query = st.text_input("¿Qué estás buscando?")
+
+    if query:
+        df = pd.read_excel("Datos Comarca.xlsx", sheet_name=categoria)
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
+        query_norm = normalizar_texto(query)
+
+        def coincide(row):
+            texto = " ".join([normalizar_texto(str(v)) for v in row.values])
+            return query_norm in texto
+
+        resultados = df[df.apply(coincide, axis=1)]
+
+        if not resultados.empty:
+            st.success(f"{len(resultados)} resultado(s) encontrado(s):")
+            mostrar_tabla_con_telefonos(resultados, categoria)
+        else:
+            st.warning("No se encontraron resultados.")
+    else:
+        st.info("Escribí una palabra para buscar.")
+
+# --------------------------
+# SECCIÓN FINAL - INFORMACIÓN EXTRA
+# --------------------------
+
+st.markdown("<br><hr><h3 style='text-align: center;'>Otros datos útiles</h3>", unsafe_allow_html=True)
+b1, b2 = st.columns(2)
+
+with b1:
+    if st.button("Ver Servicios Básicos", use_container_width=True):
+        df_serv = pd.read_excel("Datos Comarca.xlsx", sheet_name="Servicios Básicos")
+        st.subheader("Servicios Básicos")
+        mostrar_tabla_con_telefonos(df_serv, "Servicios Básicos", permitir_valoracion=False)
+
+with b2:
+    if st.button("Ver Contactos Comarca", use_container_width=True):
+        df_cont = pd.read_excel("Datos Comarca.xlsx", sheet_name="Contactos Comarca")
+        st.subheader("Contactos Comarca")
+        mostrar_tabla_con_telefonos(df_cont, "Contactos Comarca", permitir_valoracion=False)
