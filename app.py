@@ -134,7 +134,11 @@ if categoria:
     query = st.text_input("¿Qué estás buscando?")
 
     if query:
-        df = pd.read_excel("Datos Comarca.xlsx", sheet_name=categoria)
+        xls = pd.ExcelFile("Datos Comarca.xlsx")
+        if categoria not in xls.sheet_names:
+            st.error(f"La hoja '{categoria}' no existe en el archivo.")
+        else:
+            df = pd.read_excel(xls, sheet_name=categoria)
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
         query_norm = normalizar_texto(query)
