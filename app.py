@@ -53,8 +53,6 @@ def mostrar_estrellas(promedio):
     vacias = 5 - llenas - int(media)
     return "⭐" * llenas + ("✴️" if media else "") + "☆" * vacias
 
-# [... resto del código igual ...]
-
 def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
     df = df.copy()
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
@@ -100,93 +98,3 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                 fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
                 hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
                 st.success("¡Gracias por tu valoración!")
-
-# --------------------------
-# CARGAR DATOS PRINCIPALES
-# --------------------------
-
-@st.cache_data
-def cargar_datos():
-    archivo = pd.ExcelFile("Datos Comarca.xlsx")
-    return {
-        "Prov. de Servicios": archivo.parse("Prov. de Servicios & Más"),
-        "Actividades": archivo.parse("Actividades"),
-        "Comestibles": archivo.parse("Comestibles"),
-        "Servicios Básicos": archivo.parse("Servicios Básicos"),
-        "Contactos Comarca": archivo.parse("Contactos Comarca")
-    }
-
-datos = cargar_datos()
-
-# Ejemplos por categoría
-ejemplos = {
-    "Prov. de Servicios": ["Herrería", "Carpinteria", "Fletes"],
-    "Actividades": ["Yoga", "Cultural / Niños", "Vitrofusión"],
-    "Comestibles": ["Cerveza", "Dulces Caseros", "Carnes y Pescados"]
-}
-
-# --------------------------
-# INTERFAZ DE USUARIO
-# --------------------------
-
-st.markdown("<h1 style='text-align: center;'>Buscador de servicios, actividades y productos</h1>", unsafe_allow_html=True)
-
-st.markdown("<div style='text-align: center;'>Seleccioná una categoría para explorar los datos disponibles en la comarca. Podés buscar palabras como estas:</div>", unsafe_allow_html=True)
-for cat, ej in ejemplos.items():
-    st.markdown(f"<div style='text-align: center;'>**{cat}** → _" + ", ".join(ej) + "_</div>", unsafe_allow_html=True)
-
-st.divider()
-
-# Botones de categoría
-categoria = st.session_state.get("categoria", None)
-with st.container():
-    st.button("Prov. de Servicios", use_container_width=True, key="btn1")
-    st.button("Actividades", use_container_width=True, key="btn2")
-    st.button("Comestibles", use_container_width=True, key="btn3")
-
-if st.session_state.get("btn1"):
-    categoria = "Prov. de Servicios"
-elif st.session_state.get("btn2"):
-    categoria = "Actividades"
-elif st.session_state.get("btn3"):
-    categoria = "Comestibles"
-
-if categoria:
-    st.session_state["categoria"] = categoria
-    st.markdown(f"<h2 style='text-align: center;'>Búsqueda en: {categoria}</h2>", unsafe_allow_html=True)
-    query = st.text_input("¿Qué estás buscando?")
-
-    if query:
-        df = datos[categoria]
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-        if "Nombre" in df.columns:
-            df["Nombre"] = df["Nombre"].fillna("N/N")
-
-        query_norm = normalizar_texto(query)
-
-        def coincide(row):
-            texto = " ".join([normalizar_texto(str(v)) for v in row.values])
-            return query_norm in texto
-
-        resultados = df[df.apply(coincide, axis=1)]
-
-        if not resultados.empty:
-            st.success(f"{len(resultados)} resultado(s) encontrado(s):")
-            mostrar_tabla_con_telefonos(resultados, categoria)
-        else:
-            st.warning("No se encontraron resultados.")
-    else:
-        st.info("Escribí una palabra para buscar.")
-
-# Botones finales horizontales
-st.divider()
-st.markdown("<h3 style='text-align: center;'>Otros datos útiles</h3>", unsafe_allow_html=True)
-
-with st.container():
-    st.button("Ver Servicios Básicos", use_container_width=True, key="basicos")
-    st.button("Ver Contactos Comarca", use_container_width=True, key="comarca")
-
-if st.session_state.get("basicos"):
-    mostrar_tabla_con_telefonos(datos["Servicios Básicos"], "Servicios Básicos", permitir_valoracion=False)
-if st.session_state.get("comarca"):
-    mostrar_tabla_con_telefonos(datos["Contactos Comarca"], "Contactos Comarca", permitir_valoracion=False)
