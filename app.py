@@ -123,22 +123,30 @@ Comestibles (<i>Cerveza, Dulces, Carnes</i>)
 st.divider()
 
 col1, col2, col3 = st.columns([1,1,1])
-categoria = st.session_state.get("categoria", None)
+
+categoria = None
+if 'categoria' not in st.session_state:
+    st.session_state['categoria'] = None
 
 with col1:
     if st.button("Prov. de Servicios", use_container_width=True):
-        categoria = "Prov. de Servicios"
+        st.session_state['categoria'] = "Prov. de Servicios"
+        st.session_state['query'] = ""
 with col2:
     if st.button("Actividades", use_container_width=True):
-        categoria = "Actividades"
+        st.session_state['categoria'] = "Actividades"
+        st.session_state['query'] = ""
 with col3:
     if st.button("Comestibles", use_container_width=True):
-        categoria = "Comestibles"
+        st.session_state['categoria'] = "Comestibles"
+        st.session_state['query'] = ""
 
-if categoria:
+categoria = st.session_state['categoria']
+
     st.session_state["categoria"] = categoria
     st.markdown(f"<h2 style='text-align: center;'>Búsqueda en: {categoria}</h2>", unsafe_allow_html=True)
-    query = st.text_input("¿Qué estás buscando?")
+    query = st.text_input("¿Qué estás buscando?", value=st.session_state.get('query', ""))
+st.session_state['query'] = query
 
     if query:
         xls = pd.ExcelFile("Datos Comarca.xlsx")
@@ -161,22 +169,7 @@ if categoria:
                 mostrar_tabla_con_telefonos(resultados, categoria)
             else:
                 st.warning(f"No encontramos resultados para esa palabra en la categoría '{categoria}'. Podés probar otra palabra o cambiar de categoría.")
-            del df  # asegura que df no quede definido si entra por error
-            df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-
-            query_norm = normalizar_texto(query)
-
-            def coincide(row):
-                texto = " ".join([normalizar_texto(str(v)) for v in row.values])
-                return query_norm in texto
-
-            resultados = df[df.apply(coincide, axis=1)]
-
-            if not resultados.empty:
-                st.success(f"{len(resultados)} resultado(s) encontrado(s):")
-                mostrar_tabla_con_telefonos(resultados, categoria)
-            else:
-                st.warning("No se encontraron resultados.")
+            
     else:
         st.info("Escribí una palabra para buscar.")
 
@@ -185,7 +178,7 @@ if categoria:
 # --------------------------
 
 st.markdown("<br><hr><h3 style='text-align: center;'>Otros datos útiles</h3>", unsafe_allow_html=True)
-b1, b2 = st.columns(2)
+b1, b2, b3 = st.columns(3)
 
 with b1:
     if st.button("Ver Servicios Básicos", use_container_width=True):
@@ -198,3 +191,19 @@ with b2:
         df_cont = pd.read_excel("Datos Comarca.xlsx", sheet_name="Contactos Comarca")
         st.subheader("Contactos Comarca")
         mostrar_tabla_con_telefonos(df_cont, "Contactos Comarca", permitir_valoracion=False)
+
+with b3:
+    if st.button("Ver Emergencias", use_container_width=True):
+        st.subheader("Emergencias, Urgencias y Centros de Atención")
+        data_emergencias = [
+            {"Servicio": "Hospital Capilla del Señor", "Teléfono": "02323-491020", "Dirección": "Moreno 440, Capilla del Señor"},
+            {"Servicio": "Ambulancia SAME", "Teléfono": "107", "Dirección": "Capilla del Señor"},
+            {"Servicio": "Bomberos Voluntarios Exaltación", "Teléfono": "100 / 02323-492444", "Dirección": "Av. San Martín 565, Capilla del Señor"},
+            {"Servicio": "Policía Exaltación de la Cruz", "Teléfono": "911 / 02323-491020", "Dirección": "Capilla del Señor"},
+            {"Servicio": "Hospital Municipal Fátima", "Teléfono": "02323-490123", "Dirección": "Ruta 6, Fátima"},
+            {"Servicio": "Veterinaria Sakura Vet", "Teléfono": "11-5555-6789", "Dirección": "Sakura"},
+            {"Servicio": "Farmacia Central", "Teléfono": "02323-493211", "Dirección": "Capilla del Señor"},
+            {"Servicio": "Centro Médico Parada Robles", "Teléfono": "02323-499888", "Dirección": "Parada Robles"}
+        ]
+        df_emergencias = pd.DataFrame(data_emergencias)
+        mostrar_tabla_con_telefonos(df_emergencias, "Emergencias", permitir_valoracion=False)
