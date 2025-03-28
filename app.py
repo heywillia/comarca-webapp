@@ -59,9 +59,18 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
     if "Nombre" in df.columns:
         df["Nombre"] = df["Nombre"].fillna("N/N")
 
-    for _, row in df.iterrows():
-        with st.container():
-            st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+    form_ids = set()
+
+    for i, row in df.iterrows():
+        nombre = row['Nombre'] if pd.notna(row['Nombre']) else "N/N"
+        form_key = f"form_{nombre}_{categoria}_{i}"
+        if form_key in form_ids:
+            continue  # evita duplicados
+        form_ids.add(form_key)
+
+        col1, col2 = st.columns([1, 2])
+
+        with col1:
             st.markdown("---")
             info = ""
             for col, val in row.items():
@@ -73,31 +82,29 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                     else:
                         info += f"**{col}:** {val}  <br>"
             st.markdown(info, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
 
-        if not permitir_valoracion:
-            continue
+        with col2:
+            if not permitir_valoracion:
+                continue
 
-        nombre = row['Nombre'] if pd.notna(row['Nombre']) else "N/N"
+            if all(col in df_val.columns for col in ['Nombre', 'Categoría', 'Estrellas']):
+                valoraciones = df_val[(df_val['Nombre'] == nombre) & (df_val['Categoría'] == categoria)]
+                if not valoraciones.empty:
+                    promedio = valoraciones["Estrellas"].mean()
+                    total = len(valoraciones)
+                    st.markdown(f"**Valoración promedio:** {mostrar_estrellas(promedio)} ({round(promedio,1)} / 5) basada en {total} opiniones")
+            else:
+                st.info("Aún no hay valoraciones disponibles.")
 
-        if all(col in df_val.columns for col in ['Nombre', 'Categoría', 'Estrellas']):
-            valoraciones = df_val[(df_val['Nombre'] == nombre) & (df_val['Categoría'] == categoria)]
-            if not valoraciones.empty:
-                promedio = valoraciones["Estrellas"].mean()
-                total = len(valoraciones)
-                st.markdown(f"<div style='text-align: center;'>**Valoración promedio:** {mostrar_estrellas(promedio)} ({round(promedio,1)} / 5) basada en {total} opiniones</div>", unsafe_allow_html=True)
-        else:
-            st.info("Aún no hay valoraciones disponibles.")
-
-        with st.form(f"form_{nombre}_{categoria}"):
-            st.markdown("<div style='text-align: center;'>**Dejá tu valoración**</div>", unsafe_allow_html=True)
-            estrellas = st.slider("Estrellas", 1, 5, 5)
-            comentario = st.text_input("Comentario (opcional)")
-            enviado = st.form_submit_button("Enviar valoración")
-            if enviado:
-                fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
-                hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
-                st.success("¡Gracias por tu valoración!")
+            with st.form(form_key):
+                st.markdown("**Dejá tu valoración**")
+                estrellas = st.slider("Estrellas", 1, 5, 5, key=f"slider_{form_key}")
+                comentario = st.text_input("Comentario (opcional)", key=f"comentario_{form_key}")
+                enviado = st.form_submit_button("Enviar valoración")
+                if enviado:
+                    fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
+                    st.success("¡Gracias por tu valoración!")
 
 # --------------------------
 # INTERFAZ INICIAL
@@ -139,21 +146,21 @@ if categoria:
             st.error(f"La hoja '{categoria}' no existe en el archivo.")
         else:
             df = pd.read_excel(xls, sheet_name=categoria)
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+            df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
-        query_norm = normalizar_texto(query)
+            query_norm = normalizar_texto(query)
 
-        def coincide(row):
-            texto = " ".join([normalizar_texto(str(v)) for v in row.values])
-            return query_norm in texto
+            def coincide(row):
+                texto = " ".join([normalizar_texto(str(v)) for v in row.values])
+                return query_norm in texto
 
-        resultados = df[df.apply(coincide, axis=1)]
+            resultados = df[df.apply(coincide, axis=1)]
 
-        if not resultados.empty:
-            st.success(f"{len(resultados)} resultado(s) encontrado(s):")
-            mostrar_tabla_con_telefonos(resultados, categoria)
-        else:
-            st.warning("No se encontraron resultados.")
+            if not resultados.empty:
+                st.success(f"{len(resultados)} resultado(s) encontrado(s):")
+                mostrar_tabla_con_telefonos(resultados, categoria)
+            else:
+                st.warning("No se encontraron resultados.")
     else:
         st.info("Escribí una palabra para buscar.")
 
