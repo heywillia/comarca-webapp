@@ -160,7 +160,7 @@ if categoria:
                 st.success(f"{len(resultados)} resultado(s) encontrado(s):")
                 mostrar_tabla_con_telefonos(resultados, categoria)
             else:
-                st.warning("No se encontraron resultados.")
+                st.warning(f"No encontramos resultados para esa palabra en la categoría '{categoria}'. Podés probar otra palabra o cambiar de categoría.")
             del df  # asegura que df no quede definido si entra por error
             df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
