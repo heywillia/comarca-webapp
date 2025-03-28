@@ -143,7 +143,7 @@ if categoria:
     if query:
         xls = pd.ExcelFile("Datos Comarca.xlsx")
         if categoria not in xls.sheet_names:
-            st.error(f"La hoja '{categoria}' no existe en el archivo.")
+            st.error(f"La categoría '{categoria}' no contiene esta palabra. Podés modificar tu búsqueda o intentar en otra categoría como 'Actividades' o 'Comestibles'.")
         else:
             df = pd.read_excel(xls, sheet_name=categoria)
             df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
