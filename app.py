@@ -68,7 +68,7 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
             continue  # evita duplicados
         form_ids.add(form_key)
 
-        col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns([1, 1])
 
         with col1:
             st.markdown("---")
@@ -124,9 +124,11 @@ st.divider()
 
 col1, col2, col3 = st.columns([1,1,1])
 
-categoria = None
 if 'categoria' not in st.session_state:
     st.session_state['categoria'] = None
+
+if 'query' not in st.session_state:
+    st.session_state['query'] = ""
 
 with col1:
     if st.button("Prov. de Servicios", use_container_width=True):
@@ -143,10 +145,10 @@ with col3:
 
 categoria = st.session_state['categoria']
 
-    st.session_state["categoria"] = categoria
+if categoria:
     st.markdown(f"<h2 style='text-align: center;'>Búsqueda en: {categoria}</h2>", unsafe_allow_html=True)
     query = st.text_input("¿Qué estás buscando?", value=st.session_state.get('query', ""))
-st.session_state['query'] = query
+    st.session_state['query'] = query
 
     if query:
         xls = pd.ExcelFile("Datos Comarca.xlsx")
@@ -169,7 +171,6 @@ st.session_state['query'] = query
                 mostrar_tabla_con_telefonos(resultados, categoria)
             else:
                 st.warning(f"No encontramos resultados para esa palabra en la categoría '{categoria}'. Podés probar otra palabra o cambiar de categoría.")
-            
     else:
         st.info("Escribí una palabra para buscar.")
 
