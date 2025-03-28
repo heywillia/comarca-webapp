@@ -161,6 +161,22 @@ if categoria:
                 mostrar_tabla_con_telefonos(resultados, categoria)
             else:
                 st.warning("No se encontraron resultados.")
+            del df  # asegura que df no quede definido si entra por error
+            df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
+            query_norm = normalizar_texto(query)
+
+            def coincide(row):
+                texto = " ".join([normalizar_texto(str(v)) for v in row.values])
+                return query_norm in texto
+
+            resultados = df[df.apply(coincide, axis=1)]
+
+            if not resultados.empty:
+                st.success(f"{len(resultados)} resultado(s) encontrado(s):")
+                mostrar_tabla_con_telefonos(resultados, categoria)
+            else:
+                st.warning("No se encontraron resultados.")
     else:
         st.info("Escribí una palabra para buscar.")
 
