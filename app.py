@@ -1,4 +1,3 @@
-
 # app.py
 import streamlit as st
 import pandas as pd
@@ -15,6 +14,8 @@ st.set_page_config(page_title="Comarca WebApp", layout="wide")
 # --------------------------
 
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1B1gSYnyx1VVNEuhI1iwwX_xZ9sFKOI4Ylh7Dhrsu9SM/edit"
+
+CATEGORIAS_PRINCIPALES = ["Prov. de Servicios", "Actividades", "Comestibles"]
 
 def conectar_a_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -46,7 +47,7 @@ def normalizar_texto(texto):
     texto = str(texto).lower()
     texto = unicodedata.normalize("NFKD", texto)
     texto = "".join([c for c in texto if not unicodedata.combining(c)])
-    return texto
+    return texto.strip()
 
 def mostrar_estrellas(promedio):
     llenas = int(promedio)
@@ -115,3 +116,47 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                     fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
                     hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
                     st.success("¡Gracias por tu valoración!")
+
+# --------------------------
+# FORMULARIO PARA AGREGAR NUEVO SERVICIO
+# --------------------------
+
+def agregar_formulario_servicio(categoria):
+    st.markdown("---")
+    with st.expander("➕ Agregar nuevo servicio"):
+        with st.form("form_nuevo_servicio"):
+            nombre = st.text_input("Nombre del servicio")
+            rubro = st.text_input("Rubro")
+            telefono = st.text_input("Teléfono (sin +54 9, ej: 11..., 023...)")
+            zona = st.text_input("Zona / Localidad")
+            usuario = st.text_input("Tu nombre (opcional)")
+            enviar = st.form_submit_button("Enviar")
+
+            if enviar:
+                if not nombre or not rubro or not telefono:
+                    st.warning("Por favor completá todos los campos obligatorios (nombre, rubro, teléfono).")
+                    return
+
+                try:
+                    hoja_cat = sheet.worksheet(categoria)
+                    registros = hoja_cat.get_all_records()
+                except:
+                    st.error("No se pudo acceder a la hoja correspondiente.")
+                    return
+
+                telefono_normalizado = telefono.replace(" ", "").replace("-", "").strip()
+                rubro_normalizado = normalizar_texto(rubro)
+                for r in registros:
+                    tel_r = str(r.get("Teléfono", "")).replace(" ", "").replace("-", "").strip()
+                    rubro_r = normalizar_texto(r.get("Rubro", ""))
+                    if tel_r == telefono_normalizado and rubro_r == rubro_normalizado:
+                        st.warning("Ya existe un servicio con ese teléfono y rubro en esta categoría.")
+                        return
+
+                fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
+                nueva_fila = [nombre, rubro, telefono, zona, usuario, fecha]
+                encabezados = hoja_cat.row_values(1)
+                while len(nueva_fila) < len(encabezados):
+                    nueva_fila.append("")
+                hoja_cat.append_row(nueva_fila)
+                st.success("¡Gracias! El servicio fue agregado correctamente.")
