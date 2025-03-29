@@ -15,7 +15,6 @@ st.set_page_config(page_title="Comarca WebApp", layout="wide")
 
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1B1gSYnyx1VVNEuhI1iwwX_xZ9sFKOI4Ylh7Dhrsu9SM/edit"
 
-
 def conectar_a_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     info = st.secrets["google_sheets"]  # ya es un diccionario
@@ -56,26 +55,17 @@ def mostrar_estrellas(promedio):
 
 def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
     df = df.copy()
-    try:
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-    except Exception:
-        st.warning("La categoría seleccionada no tiene columnas válidas para mostrar.")
-        return
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    if "Nombre" in df.columns:
+        df["Nombre"] = df["Nombre"].fillna("N/N")
 
-    if "Nombre" not in df.columns:
-        if "Servicio" in df.columns:
-            df["Nombre"] = df["Servicio"]
-        else:
-            df["Nombre"] = "N/N"
-
-    df["Nombre"] = df["Nombre"].fillna("N/N")
     form_ids = set()
 
     for i, row in df.iterrows():
         nombre = row['Nombre'] if pd.notna(row['Nombre']) else "N/N"
         form_key = f"form_{nombre}_{categoria}_{i}"
         if form_key in form_ids:
-            continue
+            continue  # evita duplicados
         form_ids.add(form_key)
 
         col1, col2 = st.columns([1, 1])
@@ -116,4 +106,105 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                     hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
                     st.success("¡Gracias por tu valoración!")
 
-# <- Acá seguía el resto del código con estructura de navegación, categorías, búsqueda, layout y otros botones.
+# --------------------------
+# INTERFAZ INICIAL
+# --------------------------
+
+st.markdown("""
+<h1 style='text-align: center;'>Buscador de servicios, actividades y productos</h1>
+<p style='text-align: center;'>Seleccioná una categoría para explorar los datos disponibles de proveedores de servicios para Comarca del Sol y zonas aledañas. Podés buscar palabras como estas:</p>
+<p style='text-align: center;'>
+Prov. de Servicios (<i>Herrería, Carpintería, Fletes</i>)<br>
+Actividades (<i>Yoga, Niños, Vitrofusión</i>)<br>
+Comestibles (<i>Cerveza, Dulces, Carnes</i>)
+</p>
+""", unsafe_allow_html=True)
+
+st.divider()
+
+col1, col2, col3 = st.columns([1,1,1])
+
+if 'categoria' not in st.session_state:
+    st.session_state['categoria'] = None
+
+if 'query' not in st.session_state:
+    st.session_state['query'] = ""
+
+with col1:
+    if st.button("Prov. de Servicios", use_container_width=True):
+        st.session_state['categoria'] = "Prov. de Servicios"
+        st.session_state['query'] = ""
+with col2:
+    if st.button("Actividades", use_container_width=True):
+        st.session_state['categoria'] = "Actividades"
+        st.session_state['query'] = ""
+with col3:
+    if st.button("Comestibles", use_container_width=True):
+        st.session_state['categoria'] = "Comestibles"
+        st.session_state['query'] = ""
+
+categoria = st.session_state['categoria']
+
+if categoria:
+    st.markdown(f"<h2 style='text-align: center;'>Búsqueda en: {categoria}</h2>", unsafe_allow_html=True)
+    query = st.text_input("¿Qué estás buscando?", value=st.session_state.get('query', ""))
+    st.session_state['query'] = query
+
+    if query:
+        xls = pd.ExcelFile("Datos Comarca.xlsx")
+        if categoria not in xls.sheet_names:
+            st.error(f"La categoría '{categoria}' no contiene esta palabra. Podés modificar tu búsqueda o intentar en otra categoría como 'Actividades' o 'Comestibles'.")
+        else:
+            df = pd.read_excel(xls, sheet_name=categoria)
+            df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
+            query_norm = normalizar_texto(query)
+
+            def coincide(row):
+                texto = " ".join([normalizar_texto(str(v)) for v in row.values])
+                return query_norm in texto
+
+            resultados = df[df.apply(coincide, axis=1)]
+
+            if not resultados.empty:
+                st.success(f"{len(resultados)} resultado(s) encontrado(s):")
+                mostrar_tabla_con_telefonos(resultados, categoria)
+            else:
+                st.warning(f"No encontramos resultados para esa palabra en la categoría '{categoria}'. Podés probar otra palabra o cambiar de categoría.")
+    else:
+        st.info("Escribí una palabra para buscar.")
+
+# --------------------------
+# SECCIÓN FINAL - INFORMACIÓN EXTRA
+# --------------------------
+
+st.markdown("<br><hr><h3 style='text-align: center;'>Otros datos útiles</h3>", unsafe_allow_html=True)
+b1, b2, b3 = st.columns(3)
+
+with b1:
+    if st.button("Ver Servicios Básicos", use_container_width=True):
+        df_serv = pd.read_excel("Datos Comarca.xlsx", sheet_name="Servicios Básicos")
+        st.subheader("Servicios Básicos")
+        mostrar_tabla_con_telefonos(df_serv, "Servicios Básicos", permitir_valoracion=False)
+
+with b2:
+    if st.button("Ver Contactos Comarca", use_container_width=True):
+        df_cont = pd.read_excel("Datos Comarca.xlsx", sheet_name="Contactos Comarca")
+        st.subheader("Contactos Comarca")
+        mostrar_tabla_con_telefonos(df_cont, "Contactos Comarca", permitir_valoracion=False)
+
+with b3:
+    if st.button("Ver Emergencias", use_container_width=True):
+        st.subheader("Emergencias, Urgencias y Centros de Atención")
+        data_emergencias = [
+            {"Servicio": "Hospital Capilla del Señor", "Teléfono": "02323-491020", "Dirección": "Moreno 440, Capilla del Señor"},
+            {"Servicio": "Ambulancia SAME", "Teléfono": "107", "Dirección": "Capilla del Señor"},
+            {"Servicio": "Bomberos Voluntarios Exaltación", "Teléfono": "100 / 02323-492444", "Dirección": "Av. San Martín 565, Capilla del Señor"},
+            {"Servicio": "Policía Exaltación de la Cruz", "Teléfono": "911 / 02323-491020", "Dirección": "Capilla del Señor"},
+            {"Servicio": "Hospital Municipal Fátima", "Teléfono": "02323-490123", "Dirección": "Ruta 6, Fátima"},
+            {"Servicio": "Veterinaria Sakura Vet", "Teléfono": "11-5555-6789", "Dirección": "Sakura"},
+            {"Servicio": "Farmacia Central", "Teléfono": "02323-493211", "Dirección": "Capilla del Señor"},
+            {"Servicio": "Centro Médico Parada Robles", "Teléfono": "02323-499888", "Dirección": "Parada Robles"}
+        ]
+        df_emergencias = pd.DataFrame(data_emergencias)
+        mostrar_tabla_con_telefonos(df_emergencias, "Emergencias", permitir_valoracion=False)
