@@ -21,6 +21,13 @@ def conectar_a_sheets():
 cliente_sheets = conectar_a_sheets()
 sheet = cliente_sheets.open_by_url(SHEET_URL)
 
+# Mapeo de nombres visibles a nombres reales de hojas
+nombres_hojas = {
+    "Prov. de Servicios": "Prov. de Servicios & Más",
+    "Actividades": "Actividades",
+    "Comestibles": "Comestibles"
+}
+
 try:
     hoja_val = sheet.worksheet("Valoraciones")
 except:
@@ -115,7 +122,8 @@ if categoria:
     st.markdown("---")
     if busqueda:
         try:
-            df = pd.DataFrame(sheet.worksheet(categoria).get_all_records())
+            hoja_real = nombres_hojas.get(categoria, categoria)
+            df = pd.DataFrame(sheet.worksheet(hoja_real).get_all_records())
             df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
             df["Nombre"] = df["Nombre"].fillna("N/N")
 
@@ -171,10 +179,11 @@ if categoria:
         enviado = st.form_submit_button("Agregar contacto")
         if enviado:
             if nombre_nuevo and rubro_nuevo and telefono_nuevo and zona_nueva:
+                hoja_nombre = nombres_hojas.get(categoria_nuevo, categoria_nuevo)
                 try:
-                    hoja_cat = sheet.worksheet(categoria_nuevo)
+                    hoja_cat = sheet.worksheet(hoja_nombre)
                 except:
-                    hoja_cat = sheet.add_worksheet(title=categoria_nuevo, rows="1000", cols="10")
+                    hoja_cat = sheet.add_worksheet(title=hoja_nombre, rows="1000", cols="10")
                     hoja_cat.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha"])
 
                 existentes = hoja_cat.get_all_records()
