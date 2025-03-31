@@ -192,8 +192,25 @@ if categoria:
                     for r in existentes
                 )
                 if not repetido:
-                    nueva_fila = [nombre_nuevo, rubro_nuevo, telefono_nuevo, zona_nueva, usuario, datetime.now().strftime("%Y-%m-%d %H:%M")]
-                    hoja_cat.append_row(nueva_fila)
+                    encabezado = hoja_cat.row_values(1)
+                    fila = []
+                    for campo in encabezado:
+                        campo = campo.lower()
+                        if "nombre" in campo:
+                            fila.append(nombre_nuevo)
+                        elif "rubro" in campo:
+                            fila.append(rubro_nuevo)
+                        elif "tel" in campo:
+                            fila.append(telefono_nuevo)
+                        elif "zona" in campo:
+                            fila.append(zona_nueva)
+                        elif "usuario" in campo:
+                            fila.append(usuario)
+                        elif "fecha" in campo:
+                            fila.append(datetime.now().strftime("%Y-%m-%d %H:%M"))
+                        else:
+                            fila.append("")
+                    hoja_cat.append_row(fila)
                     st.success("Contacto agregado correctamente.")
                 else:
                     st.warning("Este contacto ya existe con ese teléfono y rubro.")
