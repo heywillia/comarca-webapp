@@ -118,7 +118,24 @@ if categoria:
             df = pd.DataFrame(sheet.worksheet(categoria).get_all_records())
             df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
             df["Nombre"] = df["Nombre"].fillna("N/N")
-            df_filtrado = df[df.apply(lambda row: busqueda.lower() in str(row.values).lower(), axis=1)]
+
+            sinonimos = {
+                "plomeria": ["plomero", "caños de agua", "desagüe", "plomería"],
+                "electricista": ["electricidad", "instalación eléctrica"],
+                "gasista": ["gas", "instalación de gas"]
+            }
+
+            def coincide(row):
+                texto = " ".join(str(v).lower() for v in row.values)
+                if busqueda.lower() in texto:
+                    return True
+                for clave, lista in sinonimos.items():
+                    if busqueda.lower() in lista:
+                        return any(clave in texto for clave in lista)
+                return False
+
+            df_filtrado = df[df.apply(coincide, axis=1)]
+
             if not df_filtrado.empty:
                 mostrar_tabla_con_telefonos(df_filtrado, categoria)
             else:
@@ -162,7 +179,12 @@ if categoria:
         enviado = st.form_submit_button("Agregar contacto")
         if enviado:
             if nombre_nuevo and rubro_nuevo and telefono_nuevo and zona_nueva:
-                hoja_cat = sheet.worksheet(categoria_nuevo)
+                try:
+                    hoja_cat = sheet.worksheet(categoria_nuevo)
+                except:
+                    hoja_cat = sheet.add_worksheet(title=categoria_nuevo, rows="1000", cols="10")
+                    hoja_cat.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha"])
+
                 existentes = hoja_cat.get_all_records()
                 repetido = any(
                     (r.get("Teléfono") == telefono_nuevo and r.get("Rubro") == rubro_nuevo)
