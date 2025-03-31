@@ -47,8 +47,8 @@ except:
 try:
     hoja_agregados = sheet.worksheet("Contactos Nuevos")
 except:
-    hoja_agregados = sheet.add_worksheet(title="Contactos Nuevos", rows="1000", cols="6")
-    hoja_agregados.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha"])
+    hoja_agregados = sheet.add_worksheet(title="Contactos Nuevos", rows="1000", cols="7")
+    hoja_agregados.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha", "Categoría"])
 
 df_val = pd.DataFrame(hoja_val.get_all_records())
 
@@ -149,6 +149,11 @@ with st.sidebar:
             <meta http-equiv="refresh" content="0; url=tel:01123456789">
         """, unsafe_allow_html=True)
 
+    if st.button("📋 Ver contactos comarca", use_container_width=True):
+        df_comarca = pd.DataFrame(sheet.worksheet("Datos Comarca").get_all_records())
+        st.subheader("Datos de contacto oficiales de Comarca")
+        mostrar_por_rubro(df_comarca, "Comarca")
+
 st.title("Comarca del Sol - Guía de Servicios")
 
 st.markdown("""
@@ -193,11 +198,6 @@ if st.button("Ver servicios básicos"):
     st.subheader("Servicios Básicos en la zona")
     mostrar_tabla_con_telefonos(df_basicos, "Servicios Básicos", permitir_valoracion=False)
 
-if st.button("Ver contactos comarca"):
-    df_comarca = pd.DataFrame(sheet.worksheet("Datos Comarca").get_all_records())
-    st.subheader("Datos de contacto oficiales de Comarca")
-    mostrar_por_rubro(df_comarca, "Comarca")
-
 if st.button("Ver emergencias"):
     df_emergencias = pd.DataFrame(sheet.worksheet("Emergencias").get_all_records())
     st.subheader("Emergencias, Urgencias y Centros de Atención")
@@ -211,15 +211,20 @@ with st.expander("➕ Agregar nuevo contacto al directorio"):
         rubro = st.text_input("Rubro")
         telefono = st.text_input("Teléfono (sin +54 9)")
         zona = st.text_input("Zona")
+        categoria_form = st.selectbox("Categoría", ["Prov. de Servicios", "Actividades", "Comestibles"])
         usuario = st.text_input("Tu nombre (opcional)")
         enviar = st.form_submit_button("Agregar contacto")
 
         if enviar:
-            ya_existe = hoja_agregados.get_all_records()
-            df_existente = pd.DataFrame(ya_existe)
-            if not df_existente[(df_existente["Teléfono"] == telefono) & (df_existente["Rubro"] == rubro)].empty:
-                st.warning("Este contacto ya fue ingresado previamente.")
-            else:
-                fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
-                hoja_agregados.append_row([nombre, rubro, telefono, zona, usuario, fecha])
-                st.success("¡Contacto agregado para revisión!")
+            hoja_destino = sheet.worksheet(nombres_hojas[categoria_form])
+            columnas = hoja_destino.row_values(1)
+            nueva_fila = ["" for _ in columnas]
+            mapeo = {"Nombre": nombre, "Rubro": rubro, "Teléfono": telefono, "Zona": zona}
+            for i, col in enumerate(columnas):
+                if col in mapeo:
+                    nueva_fila[i] = mapeo[col]
+            hoja_destino.append_row(nueva_fila)
+
+            fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
+            hoja_agregados.append_row([nombre, rubro, telefono, zona, usuario, fecha, categoria_form])
+            st.success("¡Contacto agregado correctamente!")
