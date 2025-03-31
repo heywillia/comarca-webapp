@@ -156,15 +156,7 @@ if categoria:
             mostrar_tabla_con_telefonos(df_cc, "Contactos Comarca", permitir_valoracion=False)
     with colC:
         if st.button("Ver emergencias"):
-            data_emergencias = [
-                {"Nombre": "Bomberos Capilla del Señor", "Teléfono": "02323-491222"},
-                {"Nombre": "Policía Capilla del Señor", "Teléfono": "02323-491222"},
-                {"Nombre": "Hospital Capilla del Señor", "Teléfono": "02323-491555"},
-                {"Nombre": "Clínica Parada Robles", "Teléfono": "02323-497000"},
-                {"Nombre": "Veterinaria Sakura", "Teléfono": "0230-4667890"},
-                {"Nombre": "Farmacia El Remanso", "Teléfono": "02323-499111"},
-            ]
-            df_emergencias = pd.DataFrame(data_emergencias)
+            df_emergencias = pd.DataFrame(sheet.worksheet("Emergencias").get_all_records())
             mostrar_tabla_con_telefonos(df_emergencias, "Emergencias", permitir_valoracion=False)
 
     st.markdown("---")
