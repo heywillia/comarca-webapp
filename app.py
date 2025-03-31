@@ -25,7 +25,9 @@ sheet = cliente_sheets.open_by_url(SHEET_URL)
 nombres_hojas = {
     "Prov. de Servicios": "Prov. de Servicios & Más",
     "Actividades": "Actividades",
-    "Comestibles": "Comestibles"
+    "Comestibles": "Comestibles",
+    "Emergencias": "Emergencias",
+    "Comarca": "Datos Comarca"
 }
 
 # Diccionario de sinónimos comunes por categoría
@@ -122,8 +124,6 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                     fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
                     hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
                     st.success("¡Gracias por tu valoración!")
-
-# NUEVA FUNCIÓN PARA MOSTRAR EN ACORDEÓN
 
 def mostrar_por_rubro(df, categoria):
     df = df.copy()
