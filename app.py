@@ -103,6 +103,20 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                     hoja_val.append_row([nombre, categoria, estrellas, comentario, fecha])
                     st.success("¡Gracias por tu valoración!")
 
+# NUEVA FUNCIÓN PARA MOSTRAR EN ACORDEÓN
+
+def mostrar_por_rubro(df, categoria):
+    df = df.copy()
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+    df["Nombre"] = df["Nombre"].fillna("N/N")
+    if "Rubro" not in df.columns:
+        df["Rubro"] = "General"
+    rubros = df["Rubro"].fillna("General").unique()
+    for rubro in rubros:
+        subset = df[df["Rubro"] == rubro]
+        with st.expander(f"🔻 {rubro}"):
+            mostrar_tabla_con_telefonos(subset, categoria, permitir_valoracion=False)
+
 # UI PRINCIPAL
 
 st.title("Comarca del Sol - Guía de Servicios")
@@ -157,15 +171,15 @@ if categoria:
     with colA:
         if st.button("Ver servicios básicos"):
             df_sb = pd.DataFrame(sheet.worksheet("Servicios Básicos").get_all_records())
-            mostrar_tabla_con_telefonos(df_sb, "Servicios Básicos", permitir_valoracion=False)
+            mostrar_por_rubro(df_sb, "Servicios Básicos")
     with colB:
         if st.button("Ver contactos comarca"):
             df_cc = pd.DataFrame(sheet.worksheet("Contactos Comarca").get_all_records())
-            mostrar_tabla_con_telefonos(df_cc, "Contactos Comarca", permitir_valoracion=False)
+            mostrar_por_rubro(df_cc, "Contactos Comarca")
     with colC:
         if st.button("Ver emergencias"):
             df_emergencias = pd.DataFrame(sheet.worksheet("Emergencias").get_all_records())
-            mostrar_tabla_con_telefonos(df_emergencias, "Emergencias", permitir_valoracion=False)
+            mostrar_por_rubro(df_emergencias, "Emergencias")
 
     st.markdown("---")
     st.markdown("### ¿Querés sumar un nuevo contacto?")
