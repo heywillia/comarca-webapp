@@ -28,6 +28,16 @@ nombres_hojas = {
     "Comestibles": "Comestibles"
 }
 
+# Diccionario de sinónimos comunes por categoría
+sinonimos = {
+    "plomero": ["plomería", "caños", "agua", "desagüe"],
+    "electricista": ["electricidad", "cableado", "enchufe", "luces"],
+    "gasista": ["gas", "estufa", "calefacción"],
+    "fletes": ["camioneta", "mudanza", "traslado"],
+    "niños": ["niñera", "juegos", "infantil", "infancia"],
+    "dulces": ["mermeladas", "conservas", "casero"]
+}
+
 try:
     hoja_val = sheet.worksheet("Valoraciones")
 except:
@@ -45,6 +55,16 @@ def normalizar_texto(texto):
     texto = unicodedata.normalize("NFKD", texto)
     texto = "".join([c for c in texto if not unicodedata.combining(c)])
     return texto
+
+def incluir_sinonimos(palabra):
+    resultados = [palabra]
+    for clave, lista in sinonimos.items():
+        if palabra in lista:
+            resultados.append(clave)
+            resultados.extend(lista)
+        elif palabra == clave:
+            resultados.extend(lista)
+    return list(set(resultados))
 
 def mostrar_estrellas(promedio):
     llenas = int(promedio)
@@ -117,9 +137,30 @@ def mostrar_por_rubro(df, categoria):
         with st.expander(f"🔻 {rubro}"):
             mostrar_tabla_con_telefonos(subset, categoria, permitir_valoracion=False)
 
+# BOTÓN DE EMERGENCIA EN HEADER
+with st.sidebar:
+    if st.button("🚨 Emergencia Comarca", use_container_width=True):
+        st.markdown("""
+            <meta http-equiv="refresh" content="0; url=tel:01123456789">
+        """, unsafe_allow_html=True)
+
 # UI PRINCIPAL
 
 st.title("Comarca del Sol - Guía de Servicios")
+
+# GUÍA DE ASOCIACIÓN
+with st.expander("🤝 Asociate a Comarca del Sol", expanded=False):
+    st.markdown("""
+    Para formar parte de la comunidad:
+
+    1. 📩 Enviá un correo a **comarcadelsoloficial@gmail.com**
+    2. 📝 Completá el formulario de Google que te enviaremos
+    3. 💳 Aboná la cuota del mes en curso
+    4. ✅ Te incluiremos en los grupos oficiales de difusión y coordinación (previa autorización)
+
+    ¡Ser parte suma y fortalece a la comunidad!
+    """)
+
 st.markdown("""
 Seleccioná una categoría para explorar los datos disponibles de proveedores de servicios para Comarca del Sol y zonas aledañas.  
 Podés buscar palabras como estas:
@@ -127,106 +168,3 @@ Podés buscar palabras como estas:
 - **Actividades** (Yoga, Niños, Vitrofusión)  
 - **Comestibles** (Cerveza, Dulces, Carnes)
 """)
-
-categorias = ["Prov. de Servicios", "Actividades", "Comestibles"]
-categoria = st.selectbox("Seleccioná una categoría:", categorias)
-busqueda = st.text_input("Buscá un servicio (palabra clave):")
-
-if categoria:
-    st.markdown("---")
-    if busqueda:
-        try:
-            hoja_real = nombres_hojas.get(categoria, categoria)
-            df = pd.DataFrame(sheet.worksheet(hoja_real).get_all_records())
-            df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-            df["Nombre"] = df["Nombre"].fillna("N/N")
-
-            sinonimos = {
-                "plomeria": ["plomero", "caños de agua", "desagüe", "plomería"],
-                "electricista": ["electricidad", "instalación eléctrica"],
-                "gasista": ["gas", "instalación de gas"]
-            }
-
-            def coincide(row):
-                texto = " ".join(str(v).lower() for v in row.values)
-                if busqueda.lower() in texto:
-                    return True
-                for clave, lista in sinonimos.items():
-                    if busqueda.lower() in lista:
-                        return any(clave in texto for clave in lista)
-                return False
-
-            df_filtrado = df[df.apply(coincide, axis=1)]
-
-            if not df_filtrado.empty:
-                mostrar_tabla_con_telefonos(df_filtrado, categoria)
-            else:
-                st.warning("No contiene esta palabra. Podés buscarla en otra categoría o modificarla e intentarlo de nuevo.")
-        except Exception:
-            st.error("No pudimos cargar los datos. Revisá que la categoría exista en la planilla.")
-
-    st.markdown("---")
-    st.markdown("### Otros datos útiles")
-    colA, colB, colC = st.columns(3)
-    with colA:
-        if st.button("Ver servicios básicos"):
-            df_sb = pd.DataFrame(sheet.worksheet("Servicios Básicos").get_all_records())
-            mostrar_por_rubro(df_sb, "Servicios Básicos")
-    with colB:
-        if st.button("Ver contactos comarca"):
-            df_cc = pd.DataFrame(sheet.worksheet("Contactos Comarca").get_all_records())
-            mostrar_por_rubro(df_cc, "Contactos Comarca")
-    with colC:
-        if st.button("Ver emergencias"):
-            df_emergencias = pd.DataFrame(sheet.worksheet("Emergencias").get_all_records())
-            mostrar_por_rubro(df_emergencias, "Emergencias")
-
-    st.markdown("---")
-    st.markdown("### ¿Querés sumar un nuevo contacto?")
-    with st.form("nuevo_contacto_form"):
-        nombre_nuevo = st.text_input("Nombre")
-        rubro_nuevo = st.text_input("Rubro")
-        categoria_nuevo = st.selectbox("Categoría", categorias)
-        telefono_nuevo = st.text_input("Teléfono (sin +54 9, solo desde 11 o 023)")
-        zona_nueva = st.text_input("Zona")
-        usuario = st.text_input("Tu nombre (opcional)")
-        enviado = st.form_submit_button("Agregar contacto")
-        if enviado:
-            if nombre_nuevo and rubro_nuevo and telefono_nuevo and zona_nueva:
-                hoja_nombre = nombres_hojas.get(categoria_nuevo, categoria_nuevo)
-                try:
-                    hoja_cat = sheet.worksheet(hoja_nombre)
-                except:
-                    hoja_cat = sheet.add_worksheet(title=hoja_nombre, rows="1000", cols="10")
-                    hoja_cat.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha"])
-
-                existentes = hoja_cat.get_all_records()
-                repetido = any(
-                    (r.get("Teléfono") == telefono_nuevo and r.get("Rubro") == rubro_nuevo)
-                    for r in existentes
-                )
-                if not repetido:
-                    encabezado = hoja_cat.row_values(1)
-                    fila = []
-                    for campo in encabezado:
-                        campo = campo.lower()
-                        if "nombre" in campo:
-                            fila.append(nombre_nuevo)
-                        elif "rubro" in campo:
-                            fila.append(rubro_nuevo)
-                        elif "tel" in campo:
-                            fila.append(telefono_nuevo)
-                        elif "zona" in campo:
-                            fila.append(zona_nueva)
-                        elif "usuario" in campo:
-                            fila.append(usuario)
-                        elif "fecha" in campo:
-                            fila.append(datetime.now().strftime("%Y-%m-%d %H:%M"))
-                        else:
-                            fila.append("")
-                    hoja_cat.append_row(fila)
-                    st.success("Contacto agregado correctamente.")
-                else:
-                    st.warning("Este contacto ya existe con ese teléfono y rubro.")
-            else:
-                st.error("Faltan completar algunos campos obligatorios.")
