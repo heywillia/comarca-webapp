@@ -145,6 +145,18 @@ with st.sidebar:
 
 st.title("Comarca del Sol - Guía de Servicios")
 
+st.markdown("""
+Seleccioná una categoría para explorar los datos disponibles de proveedores de servicios para Comarca del Sol y zonas aledañas.
+
+Podés buscar palabras como estas:
+
+- **Prov. de Servicios** (Ej: Herrería, Carpintería, Fletes, Plomería)
+- **Actividades** (Ej: Yoga, Niños, Vitrofusión, Taller)
+- **Comestibles** (Ej: Cerveza, Dulces, Pan, Carnes)
+
+Utilizá el buscador para filtrar por nombre, rubro o palabra clave. También podés dejar valoraciones ⭐ y sugerencias.
+""")
+
 with st.expander("🤝 Asociate a Comarca del Sol", expanded=False):
     st.markdown("""
     Para formar parte de la comunidad:
