@@ -21,7 +21,6 @@ def conectar_a_sheets():
 cliente_sheets = conectar_a_sheets()
 sheet = cliente_sheets.open_by_url(SHEET_URL)
 
-# Mapeo de nombres visibles a nombres reales de hojas
 nombres_hojas = {
     "Prov. de Servicios": "Prov. de Servicios & Más",
     "Actividades": "Actividades",
@@ -30,7 +29,6 @@ nombres_hojas = {
     "Comarca": "Datos Comarca"
 }
 
-# Diccionario de sinónimos comunes por categoría
 sinonimos = {
     "plomero": ["plomería", "caños", "agua", "desagüe"],
     "electricista": ["electricidad", "cableado", "enchufe", "luces"],
@@ -48,7 +46,7 @@ except:
 
 df_val = pd.DataFrame(hoja_val.get_all_records())
 
-# FUNCIONES AUXILIARES
+# UTILS
 
 def normalizar_texto(texto):
     if pd.isna(texto):
@@ -137,34 +135,54 @@ def mostrar_por_rubro(df, categoria):
         with st.expander(f"🔻 {rubro}"):
             mostrar_tabla_con_telefonos(subset, categoria, permitir_valoracion=False)
 
-# BOTÓN DE EMERGENCIA EN HEADER
+# === INTERFAZ ===
+
 with st.sidebar:
     if st.button("🚨 Emergencia Comarca", use_container_width=True):
         st.markdown("""
             <meta http-equiv="refresh" content="0; url=tel:01123456789">
         """, unsafe_allow_html=True)
 
-# UI PRINCIPAL
-
 st.title("Comarca del Sol - Guía de Servicios")
 
-# GUÍA DE ASOCIACIÓN
 with st.expander("🤝 Asociate a Comarca del Sol", expanded=False):
     st.markdown("""
     Para formar parte de la comunidad:
-
     1. 📩 Enviá un correo a **comarcadelsoloficial@gmail.com**
     2. 📝 Completá el formulario de Google que te enviaremos
     3. 💳 Aboná la cuota del mes en curso
     4. ✅ Te incluiremos en los grupos oficiales de difusión y coordinación (previa autorización)
-
     ¡Ser parte suma y fortalece a la comunidad!
     """)
 
-st.markdown("""
-Seleccioná una categoría para explorar los datos disponibles de proveedores de servicios para Comarca del Sol y zonas aledañas.  
-Podés buscar palabras como estas:
-- **Prov. de Servicios** (Herrería, Carpintería, Fletes)  
-- **Actividades** (Yoga, Niños, Vitrofusión)  
-- **Comestibles** (Cerveza, Dulces, Carnes)
-""")
+categoria = st.selectbox("Seleccioná una categoría:", list(nombres_hojas.keys()))
+df = pd.DataFrame(sheet.worksheet(nombres_hojas[categoria]).get_all_records())
+
+termino = st.text_input("¿Qué estás buscando?")
+
+if termino:
+    palabras = incluir_sinonimos(normalizar_texto(termino))
+    df_filtro = df[df.apply(lambda fila: any(p in normalizar_texto(str(v)) for p in palabras for v in fila.values), axis=1)]
+    if not df_filtro.empty:
+        st.success(f"{len(df_filtro)} resultado(s) encontrado(s):")
+        mostrar_tabla_con_telefonos(df_filtro, categoria)
+    else:
+        st.warning("No se encontraron resultados. Podés intentar con otra palabra o categoría.")
+else:
+    mostrar_tabla_con_telefonos(df, categoria)
+
+# OTROS DATOS ÚTILES
+if st.button("Ver servicios básicos"):
+    df_basicos = pd.DataFrame(sheet.worksheet("Servicios Básicos").get_all_records())
+    st.subheader("Servicios Básicos en la zona")
+    mostrar_tabla_con_telefonos(df_basicos, "Servicios Básicos", permitir_valoracion=False)
+
+if st.button("Ver contactos comarca"):
+    df_comarca = pd.DataFrame(sheet.worksheet("Datos Comarca").get_all_records())
+    st.subheader("Datos de contacto oficiales de Comarca")
+    mostrar_por_rubro(df_comarca, "Comarca")
+
+if st.button("Ver emergencias"):
+    df_emergencias = pd.DataFrame(sheet.worksheet("Emergencias").get_all_records())
+    st.subheader("Emergencias, Urgencias y Centros de Atención")
+    mostrar_por_rubro(df_emergencias, "Emergencias")
