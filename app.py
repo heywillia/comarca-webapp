@@ -44,6 +44,12 @@ except:
     hoja_val = sheet.add_worksheet(title="Valoraciones", rows="1000", cols="5")
     hoja_val.append_row(["Nombre", "Categoría", "Estrellas", "Comentario", "Fecha"])
 
+try:
+    hoja_agregados = sheet.worksheet("Contactos Nuevos")
+except:
+    hoja_agregados = sheet.add_worksheet(title="Contactos Nuevos", rows="1000", cols="6")
+    hoja_agregados.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha"])
+
 df_val = pd.DataFrame(hoja_val.get_all_records())
 
 # UTILS
@@ -180,8 +186,6 @@ if termino:
         mostrar_tabla_con_telefonos(df_filtro, categoria)
     else:
         st.warning("No se encontraron resultados. Podés intentar con otra palabra o categoría.")
-else:
-    mostrar_tabla_con_telefonos(df, categoria)
 
 # OTROS DATOS ÚTILES
 if st.button("Ver servicios básicos"):
@@ -198,3 +202,24 @@ if st.button("Ver emergencias"):
     df_emergencias = pd.DataFrame(sheet.worksheet("Emergencias").get_all_records())
     st.subheader("Emergencias, Urgencias y Centros de Atención")
     mostrar_por_rubro(df_emergencias, "Emergencias")
+
+# FORMULARIO PARA AGREGAR NUEVO CONTACTO
+st.markdown("---")
+with st.expander("➕ Agregar nuevo contacto al directorio"):
+    with st.form("form_nuevo_contacto"):
+        nombre = st.text_input("Nombre del contacto")
+        rubro = st.text_input("Rubro")
+        telefono = st.text_input("Teléfono (sin +54 9)")
+        zona = st.text_input("Zona")
+        usuario = st.text_input("Tu nombre (opcional)")
+        enviar = st.form_submit_button("Agregar contacto")
+
+        if enviar:
+            ya_existe = hoja_agregados.get_all_records()
+            df_existente = pd.DataFrame(ya_existe)
+            if not df_existente[(df_existente["Teléfono"] == telefono) & (df_existente["Rubro"] == rubro)].empty:
+                st.warning("Este contacto ya fue ingresado previamente.")
+            else:
+                fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
+                hoja_agregados.append_row([nombre, rubro, telefono, zona, usuario, fecha])
+                st.success("¡Contacto agregado para revisión!")
