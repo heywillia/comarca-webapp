@@ -84,10 +84,73 @@ def mostrar_estrellas(promedio):
     vacias = 5 - llenas - int(media)
     return "⭐" * llenas + ("✴️" if media else "") + "☆" * vacias
 
+def formatear_telefono(numero):
+    """
+    Formatea un número de teléfono argentino para llamadas o WhatsApp
+    Maneja tanto celulares (comienzan con 11) como fijos (otros prefijos)
+    """
+    # Primero limpiamos el número de cualquier carácter no numérico
+    numero_limpio = re.sub(r'[^\d]', '', numero)
+    
+    # Quitamos los prefijos +54 o +549 si existen
+    if numero_limpio.startswith('549'):
+        numero_limpio = numero_limpio[3:]
+    elif numero_limpio.startswith('54'):
+        numero_limpio = numero_limpio[2:]
+    
+    # Si empieza con 0, lo quitamos (por ejemplo, 011 -> 11)
+    if numero_limpio.startswith('0'):
+        numero_limpio = numero_limpio[1:]
+    
+    # Determinamos si es celular o fijo basado en el prefijo 11
+    es_celular = numero_limpio.startswith('11') and len(numero_limpio) >= 10
+    
+    # Formateamos para visualización
+    if len(numero_limpio) >= 6:
+        if es_celular:
+            # Para celulares: ejemplo +54 9 11 1234-5678
+            if len(numero_limpio) >= 10:
+                numero_formateado = f"+54 9 {numero_limpio[:2]} {numero_limpio[2:6]}-{numero_limpio[6:]}"
+            else:
+                numero_formateado = f"+54 9 {numero_limpio[:2]} {numero_limpio[2:]}"
+        else:
+            # Para fijos: ejemplo +54 2323 123456
+            if len(numero_limpio) >= 10:
+                # Por ejemplo, 2323 123456
+                prefijo = numero_limpio[:4]
+                resto = numero_limpio[4:]
+                numero_formateado = f"+54 {prefijo} {resto}"
+            else:
+                # Hacemos nuestro mejor esfuerzo para números cortos
+                prefijo = numero_limpio[:2]
+                resto = numero_limpio[2:]
+                numero_formateado = f"+54 {prefijo} {resto}"
+    else:
+        numero_formateado = numero  # Si es muy corto, lo dejamos como está
+    
+    # Preparamos los números para enlaces
+    if es_celular:
+        # Para WhatsApp necesitamos +549 seguido del número sin espacios ni guiones
+        numero_whatsapp = f"+549{numero_limpio}"
+        return {
+            "formateado": numero_formateado,
+            "whatsapp": numero_whatsapp,
+            "llamada": f"+54{numero_limpio}",
+            "es_celular": True
+        }
+    else:
+        # Para teléfono fijo, solo llamada
+        return {
+            "formateado": numero_formateado,
+            "llamada": f"+54{numero_limpio}",
+            "es_celular": False
+        }
+
 def validar_telefono(numero):
     # Elimina espacios, guiones y paréntesis
     numero_limpio = re.sub(r'[\s\-\(\)]', '', numero)
-    # Verifica que solo contenga números
+    # Verifica que solo contenga números, + y quizás algún espacio
+    numero_limpio = re.sub(r'[\+]', '', numero_limpio)
     return numero_limpio.isdigit()
 
 def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
@@ -117,14 +180,17 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
                 if pd.notna(val):
                     if "tel" in col.lower():
                         numero = str(val).strip()
-                        numero_llamada = numero.replace(" ", "").replace("-", "")
-                        if not numero_llamada.startswith("+54"):
-                            if numero_llamada.startswith("0"):
-                                numero_llamada = "+549" + numero_llamada[1:]
-                            else:
-                                numero_llamada = "+549" + numero_llamada
-                        link = f'<a href="tel:{numero_llamada}">📞 {numero}</a>'
-                        info += f"**{col}:** {link}  <br>"
+                        telefono_info = formatear_telefono(numero)
+                        
+                        # Creamos los enlaces adecuados según el tipo de teléfono
+                        if telefono_info["es_celular"]:
+                            # Para celulares ofrecemos WhatsApp y llamada
+                            links = f'<a href="tel:{telefono_info["llamada"]}">📞 Llamar</a> | <a href="https://wa.me/{telefono_info["whatsapp"]}">💬 WhatsApp</a>'
+                        else:
+                            # Para fijos solo llamada
+                            links = f'<a href="tel:{telefono_info["llamada"]}">📞 Llamar</a>'
+                            
+                        info += f"**{col}:** {telefono_info['formateado']} {links}  <br>"
                     else:
                         info += f"**{col}:** {val}  <br>"
 
@@ -242,7 +308,7 @@ with st.expander("➕ Agregar nuevo contacto al directorio"):
     with st.form("form_nuevo_contacto"):
         nombre = st.text_input("Nombre del contacto")
         rubro = st.text_input("Rubro")
-        telefono = st.text_input("Teléfono (sin +54 9)")
+        telefono = st.text_input("Teléfono (con o sin código de área)")
         zona = st.text_input("Zona")
         categoria_form = st.selectbox("Categoría", ["Prov. de Servicios", "Actividades", "Comestibles"])
         usuario = st.text_input("Tu nombre (opcional)")
@@ -257,7 +323,7 @@ with st.expander("➕ Agregar nuevo contacto al directorio"):
             elif not telefono:
                 st.error("Por favor ingresa un teléfono para el contacto")
             elif telefono and not validar_telefono(telefono):
-                st.error("Por favor ingresa solo números en el teléfono")
+                st.error("Por favor ingresa un teléfono válido (solo números, puede incluir + al principio)")
             elif not confirmar_contacto:
                 st.warning("Por favor confirma que la información es correcta marcando la casilla")
             else:
