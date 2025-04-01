@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 import unicodedata
 import gspread
-import re
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
@@ -19,11 +18,6 @@ def conectar_a_sheets():
     cliente = gspread.authorize(creds)
     return cliente
 
-# Cacheamos la carga de datos para mejorar rendimiento
-@st.cache_data(ttl=600)  # Refresca cada 10 minutos
-def cargar_datos(hoja):
-    return pd.DataFrame(hoja.get_all_records())
-
 cliente_sheets = conectar_a_sheets()
 sheet = cliente_sheets.open_by_url(SHEET_URL)
 
@@ -33,15 +27,6 @@ nombres_hojas = {
     "Comestibles": "Comestibles",
     "Emergencias": "Emergencias",
     "Comarca": "Datos Comarca"
-}
-
-sinonimos = {
-    "plomero": ["plomería", "caños", "agua", "desagüe"],
-    "electricista": ["electricidad", "cableado", "enchufe", "luces"],
-    "gasista": ["gas", "estufa", "calefacción"],
-    "fletes": ["camioneta", "mudanza", "traslado"],
-    "niños": ["niñera", "juegos", "infantil", "infancia"],
-    "dulces": ["mermeladas", "conservas", "casero"]
 }
 
 try:
@@ -56,10 +41,10 @@ except:
     hoja_agregados = sheet.add_worksheet(title="Contactos Nuevos", rows="1000", cols="7")
     hoja_agregados.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha", "Categoría"])
 
-df_val = cargar_datos(hoja_val)
+# 🚫 Quitamos la función cacheada porque hoja_val es un objeto no hasheable
+df_val = pd.DataFrame(hoja_val.get_all_records())
 
 # UTILS
-
 def normalizar_texto(texto):
     if pd.isna(texto):
         return ""
