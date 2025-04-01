@@ -104,11 +104,16 @@ def mostrar_tabla_con_telefonos(df, categoria, permitir_valoracion=True):
             for col, val in row.items():
                 if pd.notna(val):
                     if "tel" in col.lower():
-                        numero = str(val)
-                        link = f'<a href="tel:{numero}">📞 {numero}</a>'
+                        numero = str(val).strip()
+                        numero_llamada = numero.replace(" ", "").replace("-", "")
+                        if not numero_llamada.startswith("+54"):
+                            if numero_llamada.startswith("0"):
+                                numero_llamada = "+549" + numero_llamada[1:]
+                            else:
+                                numero_llamada = "+549" + numero_llamada
+                        link = f'<a href="tel:{numero_llamada}">📞 {numero}</a>'
                         info += f"**{col}:** {link}  <br>"
-                    else:
-                        info += f"**{col}:** {val}  <br>"
+
             st.markdown(info, unsafe_allow_html=True)
 
         with col2:
