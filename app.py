@@ -56,7 +56,7 @@ except:
     hoja_agregados = sheet.add_worksheet(title="Contactos Nuevos", rows="1000", cols="7")
     hoja_agregados.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha", "Categoría"])
 
-df_val = cargar_datos_val()
+df_val = cargar_datos(hoja_val)
 
 # UTILS
 
