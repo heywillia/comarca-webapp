@@ -21,8 +21,8 @@ def conectar_a_sheets():
 
 # Cacheamos la carga de datos para mejorar rendimiento
 @st.cache_data(ttl=600)  # Refresca cada 10 minutos
-def cargar_datos(hoja):
-    return pd.DataFrame(hoja.get_all_records())
+def cargar_datos_val():
+    return pd.DataFrame(sheet.worksheet("Valoraciones").get_all_records())
 
 cliente_sheets = conectar_a_sheets()
 sheet = cliente_sheets.open_by_url(SHEET_URL)
@@ -56,7 +56,7 @@ except:
     hoja_agregados = sheet.add_worksheet(title="Contactos Nuevos", rows="1000", cols="7")
     hoja_agregados.append_row(["Nombre", "Rubro", "Teléfono", "Zona", "Usuario", "Fecha", "Categoría"])
 
-df_val = cargar_datos(hoja_val)
+df_val = cargar_datos_val()
 
 # UTILS
 
