@@ -21,8 +21,8 @@ def conectar_a_sheets():
 
 # Cacheamos la carga de datos para mejorar rendimiento
 @st.cache_data(ttl=600)  # Refresca cada 10 minutos
-def cargar_datos_val():
-    return pd.DataFrame(sheet.worksheet("Valoraciones").get_all_records())
+def cargar_datos(hoja):
+    return pd.DataFrame(hoja.get_all_records())
 
 cliente_sheets = conectar_a_sheets()
 sheet = cliente_sheets.open_by_url(SHEET_URL)
@@ -237,7 +237,7 @@ def mostrar_por_rubro(df, categoria):
 with st.sidebar:
     if st.button("🔄 Actualizar datos", use_container_width=True):
         st.cache_data.clear()
-        st.experimental_rerun()
+        st.rerun()
         
     if st.button("🚨 Emergencia Comarca", use_container_width=True):
         st.markdown("""
@@ -273,7 +273,8 @@ with st.expander("🤝 Asociate a Comarca del Sol", expanded=False):
     ¡Ser parte suma y fortalece a la comunidad!
     """)
 
-categoria = st.selectbox("Seleccioná una categoría:", list(nombres_hojas.keys()))
+categorias_visibles = ["Prov. de Servicios", "Actividades", "Comestibles"]
+categoria = st.selectbox("Seleccioná una categoría:", categorias_visibles)
 df = cargar_datos(sheet.worksheet(nombres_hojas[categoria]))
 
 termino = st.text_input("¿Qué estás buscando?")
