@@ -1,8 +1,8 @@
+
 # app.py
 import streamlit as st
-import pandas as pd
-import unicodedata
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
-...
+
+st.set_page_config(page_title="Comarca WebApp", layout="wide")
+
+st.title("Comarca del Sol - Guía de Servicios")
+st.write("¡Bienvenido!")
